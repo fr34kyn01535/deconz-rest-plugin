@@ -129,6 +129,9 @@ bool DeRestPluginPrivate::readBindingTable(RestNodeBase *node, quint8 startIndex
     else if (checkMacVendor(node->address(), VENDOR_UBISYS))
     {
     }
+    else if (checkMacVendor(node->address(), VENDOR_DANALOCK))
+    {
+    }
     else if (checkMacVendor(node->address(), VENDOR_DEVELCO))
     {
     }
