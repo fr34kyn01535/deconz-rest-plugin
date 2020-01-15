@@ -115,6 +115,7 @@
 
 // Other HA devices
 #define DEV_ID_HA_WINDOW_COVERING_DEVICE    0x0202 // Window Covering Device
+#define DEV_ID_DOOR_LOCK                    0x000a // Door Lock
 //
 #define DEV_ID_IAS_ZONE                     0x0402 // IAS Zone
 #define DEV_ID_IAS_WARNING_DEVICE           0x0403 // IAS Warning Device
@@ -263,6 +264,7 @@
 #define VENDOR_NETVOX       0x109F
 #define VENDOR_NYCE         0x10B9
 #define VENDOR_UBISYS       0x10F2
+#define VENDOR_DANALOCK     0x0101
 #define VENDOR_BEGA         0x1105
 #define VENDOR_PHYSICAL     0x110A // Used by SmartThings
 #define VENDOR_OSRAM        0x110C
@@ -641,7 +643,9 @@ enum TaskType
     TaskWarning = 34,
     TaskIncBrightness = 35,
     TaskWindowCovering = 36,
-    TaskThermostat = 37
+    TaskThermostat = 37,
+    TaskDoorLock = 38,
+    TaskDoorUnlock = 39
 };
 
 struct TaskItem
@@ -1269,7 +1273,9 @@ public:
     bool addTaskSetColorLoop(TaskItem &task, bool colorLoopActive, uint8_t speed);
     bool addTaskIdentify(TaskItem &task, uint16_t identifyTime);
     bool addTaskTriggerEffect(TaskItem &task, uint8_t effectIdentifier);
-    bool addTaskWarning(TaskItem &task, uint8_t options, uint16_t duration);
+    bool addTaskWarning(TaskItem &task, uint8_t options, uint16_t duration); 
+    bool addTaskDoorLock(TaskItem &task);
+    bool addTaskDoorUnlock(TaskItem &task);
     bool addTaskAddToGroup(TaskItem &task, uint16_t groupId);
     bool addTaskViewGroup(TaskItem &task, uint16_t groupId);
     bool addTaskRemoveFromGroup(TaskItem &task, uint16_t groupId);
@@ -1305,6 +1311,7 @@ public:
     void handleDEClusterIndication(const deCONZ::ApsDataIndication &ind, deCONZ::ZclFrame &zclFrame);
     void handleXalClusterIndication(const deCONZ::ApsDataIndication &ind, deCONZ::ZclFrame &zclFrame);
     void handleWindowCoveringClusterIndication(const deCONZ::ApsDataIndication &ind, deCONZ::ZclFrame &zclFrame);
+    void handleDoorLockClusterIndication(const deCONZ::ApsDataIndication &ind, deCONZ::ZclFrame &zclFrame);
     void handleThermostatClusterIndication(const deCONZ::ApsDataIndication &ind, deCONZ::ZclFrame &zclFrame);
     void handleTimeClusterIndication(const deCONZ::ApsDataIndication &ind, deCONZ::ZclFrame &zclFrame);
     void sendTimeClusterResponse(const deCONZ::ApsDataIndication &ind, deCONZ::ZclFrame &zclFrame);

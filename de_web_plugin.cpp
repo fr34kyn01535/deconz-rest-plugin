@@ -92,6 +92,7 @@ const quint64 energyMiMacPrefix   = 0xd0cf5e0000000000ULL;
 const quint64 bjeMacPrefix        = 0xd85def0000000000ULL;
 const quint64 xalMacPrefix        = 0xf8f0050000000000ULL;
 const quint64 lutronMacPrefix     = 0xffff000000000000ULL;
+const quint64 danalockMacPrefix   = 0x115c000000000000ULL;
 const quint64 legrandMacPrefix    = 0x0004740000000000ULL;
 const quint64 xiaomiMacPrefix     = 0x04cf8c0000000000ULL;
 
@@ -206,6 +207,7 @@ static const SupportedDevice supportedDevices[] = {
     { VENDOR_KEEN_HOME , "SV01-", keenhomeMacPrefix}, // Keen Home Vent
     { VENDOR_INNR, "SP 120", jennicMacPrefix}, // innr smart plug
     { VENDOR_PHYSICAL, "tagv4", stMacPrefix}, // SmartThings Arrival sensor
+    { VENDOR_DANALOCK, "V3", danalockMacPrefix}, // Danalock Smart Lock
     { VENDOR_JENNIC, "VMS_ADUROLIGHT", jennicMacPrefix }, // Trust motion sensor ZPIR-8000
     { VENDOR_JENNIC, "CSW_ADUROLIGHT", jennicMacPrefix }, // Trust contact sensor ZMST-808
     { VENDOR_JENNIC, "ZYCT-202", jennicMacPrefix }, // Trust remote control ZYCT-202
@@ -1477,6 +1479,7 @@ void DeRestPluginPrivate::addLightNode(const deCONZ::Node *node)
         node->nodeDescriptor().manufacturerCode() == VENDOR_JENNIC || // Xiaomi lumi.ctrl_neutral1, lumi.ctrl_neutral2
         node->nodeDescriptor().manufacturerCode() == VENDOR_EMBER || // atsmart Z6-03 switch
         node->nodeDescriptor().manufacturerCode() == VENDOR_NONE || // Climax Siren
+        node->nodeDescriptor().manufacturerCode() == VENDOR_DANALOCK || // Danalock Door Lock
         node->nodeDescriptor().manufacturerCode() == VENDOR_DEVELCO || // Develco Smoke sensor with siren
         node->nodeDescriptor().manufacturerCode() == VENDOR_LDS || // Samsung SmartPlug 2019
         node->nodeDescriptor().manufacturerCode() == VENDOR_IKEA || // IKEA FYRTUR and KADRILJ smart binds
@@ -1506,6 +1509,7 @@ void DeRestPluginPrivate::addLightNode(const deCONZ::Node *node)
             else if (i->inClusters()[c].id() == COLOR_CLUSTER_ID) { hasServerColor = true; }
             else if (i->inClusters()[c].id() == WINDOW_COVERING_CLUSTER_ID) { hasServerOnOff = true; }
             else if (i->inClusters()[c].id() == IAS_WD_CLUSTER_ID) { hasIASWDCluster = true; }
+            else if (i->inClusters()[c].id() == DOOR_LOCK_CLUSTER_ID) { hasServerOnOff = true; }
         }
 
         // check if node already exist
@@ -1618,6 +1622,7 @@ void DeRestPluginPrivate::addLightNode(const deCONZ::Node *node)
                 case DEV_ID_Z30_EXTENDED_COLOR_LIGHT:
                 case DEV_ID_Z30_COLOR_TEMPERATURE_LIGHT:
                 case DEV_ID_HA_WINDOW_COVERING_DEVICE:
+                case DEV_ID_DOOR_LOCK:
                 case DEV_ID_FAN:
                 {
                     if (hasServerOnOff)
@@ -2222,6 +2227,7 @@ LightNode *DeRestPluginPrivate::updateLightNode(const deCONZ::NodeEvent &event)
             case DEV_ID_ZLL_ONOFF_PLUGIN_UNIT:
             case DEV_ID_Z30_ONOFF_PLUGIN_UNIT:
             case DEV_ID_HA_WINDOW_COVERING_DEVICE:
+            case DEV_ID_DOOR_LOCK:
             case DEV_ID_ZLL_ONOFF_SENSOR:
             case DEV_ID_XIAOMI_SMART_PLUG:
             case DEV_ID_IAS_ZONE:
@@ -2572,6 +2578,41 @@ LightNode *DeRestPluginPrivate::updateLightNode(const deCONZ::NodeEvent &event)
                         lightNode->setZclValue(updateType, event.clusterId(), 0x0000, ia->numericValue());
                         break;
                     }
+                }
+            }else if (ic->id() == DOOR_LOCK_CLUSTER_ID && (event.clusterId() == DOOR_LOCK_CLUSTER_ID))
+            {
+                std::vector<deCONZ::ZclAttribute>::const_iterator ia = ic->attributes().begin();
+                std::vector<deCONZ::ZclAttribute>::const_iterator enda = ic->attributes().end();
+                for (;ia != enda; ++ia)
+                {
+                    if (ia->id() == 0x0101) // OnOff
+                    {
+                        bool on = ia->numericValue().u8;
+                        ResourceItem *item = lightNode->item(RStateOn);
+                        if (item && item->toBool() != on)
+                        {
+                            DBG_Printf(DBG_INFO, "0x%016llX onOff %u --> %u\n", lightNode->address().ext(), (uint)item->toNumber(), on);
+                            item->setValue(on);
+                            Event e(RLights, RStateOn, lightNode->id(), item);
+                            enqueueEvent(e);
+                            updated = true;
+                        }
+                        else
+                        {
+                            // since light event won't trigger a group check, do it here
+                            for (const GroupInfo &gi : lightNode->groups())
+                            {
+                                if (gi.state == GroupInfo::StateInGroup)
+                                {
+                                    Event e(RGroups, REventCheckGroupAnyOn, int(gi.id));
+                                    enqueueEvent(e);
+                                }
+                            }
+                        }
+                        lightNode->setZclValue(updateType, event.clusterId(), 0x0101, ia->numericValue());
+                        break;
+                    }
+                    break;
                 }
             }
             else if (ic->id() == BASIC_CLUSTER_ID && (event.clusterId() == BASIC_CLUSTER_ID))
@@ -5078,6 +5119,10 @@ void DeRestPluginPrivate::addSensorNode(const deCONZ::Node *node, const SensorFi
 
         item = sensorNode.addItem(DataTypeString, RConfigAlert);
         item->setValue(R_ALERT_DEFAULT);
+    }
+    else if (node->nodeDescriptor().manufacturerCode() == VENDOR_DANALOCK)
+    {
+        sensorNode.setManufacturer("Danalock");
     }
     else if (node->nodeDescriptor().manufacturerCode() == VENDOR_SAMJIN)
     {
@@ -7736,6 +7781,7 @@ bool DeRestPluginPrivate::processZclAttributes(LightNode *lightNode)
         case DEV_ID_Z30_ONOFF_PLUGIN_UNIT:
         case DEV_ID_ZLL_ONOFF_SENSOR:
         case DEV_ID_HA_WINDOW_COVERING_DEVICE:
+        case DEV_ID_DOOR_LOCK:
         case DEV_ID_FAN:
             break;
 
@@ -10823,6 +10869,7 @@ void DeRestPluginPrivate::nodeEvent(const deCONZ::NodeEvent &event)
         case GROUP_CLUSTER_ID:
         case SCENE_CLUSTER_ID:
         case COLOR_CLUSTER_ID:
+        case DOOR_LOCK_CLUSTER_ID:
         case ANALOG_OUTPUT_CLUSTER_ID: // lumi.curtain
         case WINDOW_COVERING_CLUSTER_ID:  // FIXME ubisys J1 is not a light
         case FAN_CONTROL_CLUSTER_ID:
