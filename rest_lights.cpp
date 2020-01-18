@@ -580,7 +580,11 @@ int DeRestPluginPrivate::setLightState(const ApiRequest &req, ApiResponse &rsp)
     {
     	isWindowCoveringDevice = true;
     }
-
+    bool isDoorLockDevice = false;
+    if (taskRef.lightNode->type() == QLatin1String("Door Lock"))
+    {
+    	isDoorLockDevice = true;
+    }
     // on/off
     if (hasOn)
     {
@@ -609,6 +613,26 @@ int DeRestPluginPrivate::setLightState(const ApiRequest &req, ApiResponse &rsp)
                 rsp.list.append(rspItem);
                 taskToLocalData(task);
             } // FIXME end workaround window_covering
+            else if (isDoorLockDevice && addTaskDoorLockUnlock(task, isOn ? 0x00 /*Lock*/ : 0x01 /*unlock*/))
+            {	
+            	// if (isOn) 
+//             	{
+//             	  DBG_Printf(DBG_INFO, "Lock door\n");
+//             	  addTaskDoorLock(task);
+//             	}
+//             	else
+//             	{
+//             	  DBG_Printf(DBG_INFO, "Unlock door\n");
+//             	  addTaskDoorUnlock(task);
+//             	}
+
+                QVariantMap rspItem;
+                QVariantMap rspItemState;
+                rspItemState[QString("/lights/%1/state/on").arg(id)] = isOn;
+                rspItem["success"] = rspItemState;
+                rsp.list.append(rspItem);
+                taskToLocalData(task);
+            } 
             else if (isOn && taskRef.onTime > 0 && addTaskSetOnOff(task, ONOFF_COMMAND_ON_WITH_TIMED_OFF, taskRef.onTime))
             {
                 QVariantMap rspItem;

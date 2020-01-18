@@ -474,6 +474,8 @@ inline bool checkMacVendor(quint64 addr, quint16 vendor)
             return prefix == samjinMacPrefix;
         case VENDOR_DEVELCO:
             return prefix == develcoMacPrefix;
+        case VENDOR_DANALOCK:
+            return prefix == danalockMacPrefix;
         case VENDOR_LEGRAND:
             return prefix == legrandMacPrefix;
         case VENDOR_NETVOX:
@@ -1274,8 +1276,7 @@ public:
     bool addTaskIdentify(TaskItem &task, uint16_t identifyTime);
     bool addTaskTriggerEffect(TaskItem &task, uint8_t effectIdentifier);
     bool addTaskWarning(TaskItem &task, uint8_t options, uint16_t duration); 
-    bool addTaskDoorLock(TaskItem &task);
-    bool addTaskDoorUnlock(TaskItem &task);
+    bool addTaskDoorLockUnlock(TaskItem &task, uint8_t cmd);
     bool addTaskAddToGroup(TaskItem &task, uint16_t groupId);
     bool addTaskViewGroup(TaskItem &task, uint16_t groupId);
     bool addTaskRemoveFromGroup(TaskItem &task, uint16_t groupId);

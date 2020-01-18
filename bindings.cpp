@@ -1305,6 +1305,16 @@ bool DeRestPluginPrivate::sendConfigureReportingRequest(BindingTask &bt)
 
         return sendConfigureReportingRequest(bt, {rq});
     }
+    else if (bt.binding.clusterId == DOOR_LOCK_CLUSTER_ID)
+    {
+        rq.dataType = deCONZ::Zcl8BitEnum;;
+        rq.attributeId = 0x0000; // Current Lock Position
+        rq.minInterval = 1;
+        rq.maxInterval = 300;
+        //rq.reportableChange8bit = 1;
+
+        return sendConfigureReportingRequest(bt, {rq});
+    }
     else if (bt.binding.clusterId == FAN_CONTROL_CLUSTER_ID)
     {
         rq.dataType = deCONZ::Zcl8BitEnum;
@@ -1619,7 +1629,8 @@ void DeRestPluginPrivate::checkLightBindingsForAttributeReporting(LightNode *lig
         case ONOFF_CLUSTER_ID:
         case LEVEL_CLUSTER_ID:
         case COLOR_CLUSTER_ID:
-        case WINDOW_COVERING_CLUSTER_ID:
+        case WINDOW_COVERING_CLUSTER_ID:        
+        case DOOR_LOCK_CLUSTER_ID:
         case IAS_ZONE_CLUSTER_ID:
         case FAN_CONTROL_CLUSTER_ID:
         {
